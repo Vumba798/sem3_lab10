@@ -38,8 +38,15 @@ find_package(Boost CONFIG REQUIRED program_options)
 hunter_add_package(rocksdb)
 find_package(RocksDB CONFIG REQUIRED)
 
+find_package(Threads)
+
+add_subdirectory(third-party)
+
 add_library(check_summer STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/sources/check_summer.cpp
+)
+add_executable(dbcs
+  ${CMAKE_CURRENT_SOURCE_DIR}/sources/demo.cpp
 )
 add_executable(tests
   ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.cpp
@@ -48,6 +55,9 @@ add_executable(tests
 target_include_directories(check_summer
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
+target_include_directories(dbcs
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
 target_include_directories(tests
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
@@ -55,11 +65,18 @@ target_include_directories(tests
 target_link_libraries(check_summer PRIVATE
   RocksDB::rocksdb
   Boost::boost
+  Threads::Threads
+  PicoSHA2
   PUBLIC Boost::log
+  Boost::filesystem
   Boost::log_setup
   Boost::system
-  Boost::filesystem
   Boost::thread
+)
+
+target_link_libraries(dbcs PRIVATE
+  check_summer
+  Boost::program_options
 )
 
 target_link_libraries(tests GTest::gtest_main check_summer)
