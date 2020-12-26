@@ -9,12 +9,13 @@
 namespace po=boost::program_options;
 
 int main(int argc, char** argv) {
+    std::string input = "";
     std::string logLevel = "";
     std::string output = "";
     uint32_t threadCount = 0;
 
-    po::options_description desc("Allowed options:");
-    desc.add_options()
+    po::options_description visible("Options:");
+    visible.add_options()
         ("help", "produce help message")
         ("log-level", po::value<std::string>()->default_value("error"),
              "\"info\"|\"warning\"|\"debug\"")
@@ -22,13 +23,30 @@ int main(int argc, char** argv) {
              std::thread::hardware_concurrency()), "")
         ("output", po::value<std::string>()->default_value(
             "path/to/input/dbcs-storage.db"), "<path/to/output/storage.db>");
+
+    po::options_description hidden("Hidden options");
+    hidden.add_options()
+        ("input", po::value<std::string>()->default_value("path/to/input/storage.db"), "");
+
+    po::positional_options_description pos;
+    pos.add("input", -1);
+
+    po::options_description all("Allowed options:");
+    all.add(visible).add(hidden);
+
     po::variables_map vm;
-    po::store(po::parse_command_line(argc, argv, desc), vm);
+    po::store(po::command_line_parser(argc, argv).options(all).positional(pos).run(), vm);
     po::notify(vm);
 
     if (vm.count("help")) {
-        std::cout << desc << std::endl;
+        std::cout << "Usage:\n\n\tdbcs [options] <path/to/input/storage.db>\n\n\n"
+            << visible << std::endl;;
         return 1;
+    }
+    if (vm.count("input")) {
+        std::cout << "input was set to"
+            << vm["input"].as<std::string>() << std::endl;
+        input = vm["input"].as<std::string>();
     }
     if (vm.count("log-level")) {
         std::cout << "log-level was set to "
@@ -58,6 +76,7 @@ int main(int argc, char** argv) {
 
     std::cout << "\nTHREADS: " << threadCount
         << "\nLOGS: " << logLevel
+        << "\nINPUT: " << input
         << "\nOUTPUT: " << output << std::endl;
 
     return 0;
