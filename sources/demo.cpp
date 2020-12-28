@@ -22,11 +22,11 @@ int main(int argc, char** argv) {
         ("thread-count", po::value<uint32_t>()->default_value(
              std::thread::hardware_concurrency()), "")
         ("output", po::value<std::string>()->default_value(
-            "path/to/input/dbcs-storage.db"), "<path/to/output/storage.db>");
+            "path/to/output/storage_db"), "<path/to/output/storage_db>");
 
     po::options_description hidden("Hidden options");
     hidden.add_options()
-        ("input", po::value<std::string>()->default_value("path/to/input/storage.db"), "");
+        ("input", po::value<std::string>()->default_value("path/to/input/storage_db"), "");
 
     po::positional_options_description pos;
     pos.add("input", -1);
@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
     po::notify(vm);
 
     if (vm.count("help")) {
-        std::cout << "Usage:\n\n\tdbcs [options] <path/to/input/storage.db>\n\n\n"
+        std::cout << "Usage:\n\n\tdbcs [options] <path/to/input/storage_db>\n\n\n"
             << visible << std::endl;;
         return 1;
     }
