@@ -1,4 +1,5 @@
 #include <check_summer.hpp>
+#include <boost/asio/post.hpp>
 #include <picosha2.h>
 #include <rocksdb/db.h>
 #include <rocksdb/slice.h>
