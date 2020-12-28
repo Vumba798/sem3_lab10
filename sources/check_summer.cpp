@@ -105,31 +105,34 @@ auto CheckSummer::read_db() -> void {
     options.create_if_missing = false;
     rocksdb::DB* db;
 
-    std::vector<std::string> columnNames;
     std::vector<rocksdb::ColumnFamilyDescriptor> columnFamilies;
     std::vector<rocksdb::ColumnFamilyHandle*> handles;
 
+    rocksdb::DB::ListColumnFamilies(rocksdb::DBOptions(), _input, &_columnNames);
+    _data.resize(_columnNames.size());
 
-    // auto s = db->OpenForReadOnly(options, "new1",
-           // columnFamilies, &handles, &db);
-
-    rocksdb::DB::ListColumnFamilies(rocksdb::DBOptions(), "new1", &columnNames);
-
-    for (auto name : columnNames) {
+    for (auto name : _columnNames) {
         std::cout << "Name: " << name << std::endl;
         columnFamilies.push_back(rocksdb::ColumnFamilyDescriptor(
                     name, rocksdb::ColumnFamilyOptions()));
     }
-    auto s = db->OpenForReadOnly(rocksdb::Options(), "new1",
+    auto s = db->OpenForReadOnly(rocksdb::Options(), _input,
             columnFamilies, &handles, &db, false);
     if (!s.ok()) {
         std::cerr << s.ToString() << std::endl;
         return;
     }
-    for (uint32_t i = 0; i < columnNames.size(); ++i) {
+    for (uint32_t i = 0; i < _columnNames.size(); ++i) {
+        // std::unordered_map<std::string, std::string> singleColumn;
+        // _data.emplace_back(std::unordered_map<std::string, std::string> {});
         rocksdb::Iterator* iterator = db->NewIterator(rocksdb::ReadOptions(), handles[i]);
         std::cout << "I = " << i << std::endl;
         for (iterator->Seek("k"); iterator->Valid(); iterator->Next()) {
+            auto key = iterator->key().data();
+            auto value = iterator->value().data();
+
+            boost::asio::post(_pool,
+                    std::bind(&CheckSummer::calculate_hash, this, i, key, value));
             std::cout << "Key: " << iterator->key().data()
                 << "\tValue: " << iterator->value().data() << std::endl;
         }
