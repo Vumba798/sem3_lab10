@@ -142,6 +142,18 @@ auto CheckSummer::read_db() -> void {
     }
 
     delete db;
+    _pool.join();
 }
 
+auto CheckSummer::start() -> void {
+    read_db();
+    //_write_db();
+}
 
+auto CheckSummer::calculate_hash(const uint32_t i,
+        const std::string key,
+        const std::string value) -> void {
+    std::string hash_hex_str;
+    picosha2::hash256_hex_string(value, hash_hex_str);
+    _data[i][key] = hash_hex_str;
+}
