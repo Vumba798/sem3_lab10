@@ -79,5 +79,8 @@ int main(int argc, char** argv) {
         << "\nINPUT: " << input
         << "\nOUTPUT: " << output << std::endl;
 
+    CheckSummer cs(threadCount, input, output);
+    cs.write_test_db();
+    cs.read_db();
     return 0;
 }
