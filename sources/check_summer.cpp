@@ -11,11 +11,41 @@ CheckSummer::CheckSummer(const uint32_t& amountOfThreads, const std::string& inp
     _pool(amountOfThreads),
     _input(input), _output(output) {}
 
+auto CheckSummer::_write_db() -> void {
+    rocksdb::Options options;
+    options.create_if_missing = true;
+    rocksdb::DB* db;
+    rocksdb::WriteBatch batch;
+    std::vector<rocksdb::ColumnFamilyHandle*> handles;
+    handles.resize(_columnNames.size());
+
+    rocksdb::Status s = db->Open(options, _output, &db);
+    if (!s.ok()) {
+        std::cerr << s.ToString() << std::endl;
+    }
+
+    for (uint32_t i = 0; i < _columnNames.size(); ++i) {
+        db->CreateColumnFamily(
+                rocksdb::ColumnFamilyOptions(), _columnNames[i], &handles[i]);
+        for (auto it = _data[i].begin(); it != _data[i].end(); ++it) {
+            batch.Put(handles[i],
+                    rocksdb::Slice(it->first),
+                    rocksdb::Slice(it->second));
+        }
+    }
+    db->Write(rocksdb::WriteOptions(), &batch);
+
+    for (auto handle : handles) {
+        db->DestroyColumnFamilyHandle(handle);
+    }
+    delete db;
+}
+
 auto CheckSummer::write_test_db() -> void {
     rocksdb::Options options;
     options.create_if_missing = true;
     rocksdb::DB* db;
-    rocksdb::Status s = rocksdb::DB::Open(options, "new1", &db);
+    rocksdb::Status s = rocksdb::DB::Open(options, _input, &db);
     if (!s.ok()) {
         std::cerr << s.ToString() << std::endl;
         return;
