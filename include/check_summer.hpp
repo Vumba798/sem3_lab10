@@ -1,9 +1,19 @@
 #include <boost/asio/thread_pool.hpp>
+#include <boost/log/core.hpp>
+#include <boost/log/expressions.hpp>
 #include <boost/log/trivial.hpp>
+#include <boost/log/utility/setup.hpp>
 #include <rocksdb/c.h>
 #include <atomic>
 #include <condition_variable>
 #include <unordered_map>
+
+struct KeyValue {
+    std::string key;
+    std::string value;
+    inline KeyValue(const std::string& k, const std::string& v) :
+        key(k), value(v) {}
+};
 
 class CheckSummer {
 private:
