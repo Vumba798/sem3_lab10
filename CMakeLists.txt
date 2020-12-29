@@ -79,7 +79,7 @@ target_link_libraries(dbcs PRIVATE
   Boost::program_options
 )
 
-target_link_libraries(tests GTest::gtest_main check_summer)
+target_link_libraries(tests PRIVATE GTest::gtest_main check_summer)
 
 enable_testing()
 add_test(NAME unit_tests COMMAND tests)
@@ -87,7 +87,7 @@ add_test(NAME unit_tests COMMAND tests)
 if(BUILD_COVERAGE)
   function(ENABLE_PROJECT_COVERAGE PROJECT)
     target_compile_options(${PROJECT} PRIVATE --coverage)
-    target_link_libraries(${PROJECT} --coverage)
+    target_link_libraries(${PROJECT} PRIVATE --coverage)
     add_coverage(${PROJECT})
   endfunction()
 
