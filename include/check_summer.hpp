@@ -22,15 +22,16 @@ private:
     std::vector<std::string> _columnNames;
     std::string _input;
     std::string _output;
+    std::mutex _mutex;
 
+    auto _calculate_hash(const uint32_t i,
+            const KeyValue keyValue) -> void;
+    auto _read_db() -> void;
     auto _write_db() -> void;
 public:
     CheckSummer(const uint32_t& amountOfThreads, const std::string& input,
             const std::string& output);
     auto write_test_db() -> void;
-    auto read_db() -> void;
     auto start() -> void;
-    auto calculate_hash(const uint32_t i,
-            const std::string key,
-            const std::string value) -> void;
 };
+
