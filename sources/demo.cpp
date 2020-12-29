@@ -77,13 +77,33 @@ int main(int argc, char** argv) {
         output = vm["output"].as<std::string>();
     }
 
-    std::cout << "\nTHREADS: " << threadCount
-        << "\nLOGS: " << logLevel
-        << "\nINPUT: " << input
-        << "\nOUTPUT: " << output << std::endl;
+    // Setting boost log
+    auto sinkConsole = boost::log::add_console_log(
+            std::cout,
+            boost::log::keywords::format = "[%TimeStamp%]: %Message%");
+    if (logLevel == "info") {
+        sinkConsole->set_filter(
+                boost::log::trivial::severity >= boost::log::trivial::info);
+    } else if (logLevel == "warning") {
+        sinkConsole->set_filter(
+                boost::log::trivial::severity >= boost::log::trivial::warning);
+    } else if (logLevel == "error") {
+        sinkConsole->set_filter(
+                boost::log::trivial::severity >= boost::log::trivial::error);
+    } else {
+        throw std::runtime_error("Unknown log-level parameter");
+    }
+    boost::log::add_common_attributes();
+
+    BOOST_LOG_TRIVIAL(info)
+        << "Initial options:"
+        << "\n\tTHREADS: " << threadCount
+        << "\n\tLOGS: " << logLevel
+        << "\n\tINPUT: " << input
+        << "\n\tOUTPUT: " << output;
 
     CheckSummer cs(threadCount, input, output);
-    cs.write_test_db();
-    cs.read_db();
+    // cs.write_test_db();
+    cs.start();
     return 0;
 }
