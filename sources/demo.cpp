@@ -4,6 +4,7 @@
 #include <iostream>
 #include <thread>
 #include <cstdint>
+#include <stdexcept>
 #include <boost/program_options.hpp>
 
 namespace po=boost::program_options;
@@ -14,6 +15,7 @@ int main(int argc, char** argv) {
     std::string output = "";
     uint32_t threadCount = 0;
 
+    // Parsing program options
     po::options_description visible("Options:");
     visible.add_options()
         ("help", "produce help message")
@@ -38,6 +40,7 @@ int main(int argc, char** argv) {
     po::store(po::command_line_parser(argc, argv).options(all).positional(pos).run(), vm);
     po::notify(vm);
 
+    // Setting init variables
     if (vm.count("help")) {
         std::cout << "Usage:\n\n\tdbcs [options] <path/to/input/storage_db>\n\n\n"
             << visible << std::endl;;

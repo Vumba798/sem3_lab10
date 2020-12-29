@@ -85,88 +85,92 @@ auto CheckSummer::write_test_db() -> void {
     s = db->Write(rocksdb::WriteOptions(), &batch);
     assert(s.ok());
 
-    // db->Put(rocksdb::WriteOptions(), handles[0],
-            // rocksdb::Slice("key 1"), rocksdb::Slice("value 1"));
-    // db->Put(rocksdb::WriteOptions(), handles[0],
-            // rocksdb::Slice("key 2"), rocksdb::Slice("value 2"));
-    // db->Put(rocksdb::WriteOptions(), handles[0],
-            // rocksdb::Slice("key 3"), rocksdb::Slice("value 3"));
-    // db->Put(rocksdb::WriteOptions(), handles[1],
-            // rocksdb::Slice("key 4"), rocksdb::Slice("value 4"));
-    // db->Put(rocksdb::WriteOptions(), handles[1],
-            // rocksdb::Slice("key 5"), rocksdb::Slice("value 5"));
-    // db->Put(rocksdb::WriteOptions(), handles[2],
-            // rocksdb::Slice("key 6"), rocksdb::Slice("value 6"));
-    // db->Put(rocksdb::WriteOptions(), handles[2],
-            // rocksdb::Slice("key 7"), rocksdb::Slice("value 7"));
-
-    for (uint32_t i = 0; i < 3; ++i) {
-        rocksdb::Iterator* iterator = db->NewIterator(rocksdb::ReadOptions(), handles[i]);
-        for (iterator->Seek("k"); iterator->Valid(); iterator->Next()) {
-            std::cout << i << " Key: " << iterator->key().data()
-                << "\tValue: " << iterator->value().data() << std::endl;
-        }
-    }
     for (auto handle : handles) {
         db->DestroyColumnFamilyHandle(handle);
     }
     delete db;
 }
 
-auto CheckSummer::read_db() -> void {
-    rocksdb::Options options;
-    options.create_if_missing = false;
-    rocksdb::DB* db;
+auto CheckSummer::_read_db() -> void {
+    try {
+        BOOST_LOG_TRIVIAL(warning) << "Reading database, path: " << _input;
+        rocksdb::Options options;
+        options.create_if_missing = false;
+        rocksdb::DB* db;
 
-    std::vector<rocksdb::ColumnFamilyDescriptor> columnFamilies;
-    std::vector<rocksdb::ColumnFamilyHandle*> handles;
+        std::vector<rocksdb::ColumnFamilyDescriptor> columnFamilies;
+        std::vector<rocksdb::ColumnFamilyHandle*> handles;
 
-    rocksdb::DB::ListColumnFamilies(rocksdb::DBOptions(), _input, &_columnNames);
-    _data.resize(_columnNames.size());
+        rocksdb::DB::ListColumnFamilies(rocksdb::DBOptions(), _input, &_columnNames);
+        _data.resize(_columnNames.size());
+        BOOST_LOG_TRIVIAL(info) << "Amount of columns: " << _columnNames.size();
+        BOOST_LOG_TRIVIAL(info) << "Reading list of columns...";
 
-    for (auto name : _columnNames) {
-        std::cout << "Name: " << name << std::endl;
-        columnFamilies.push_back(rocksdb::ColumnFamilyDescriptor(
-                    name, rocksdb::ColumnFamilyOptions()));
-    }
-    auto s = db->OpenForReadOnly(rocksdb::Options(), _input,
-            columnFamilies, &handles, &db, false);
-    if (!s.ok()) {
-        std::cerr << s.ToString() << std::endl;
-        return;
-    }
-    for (uint32_t i = 0; i < _columnNames.size(); ++i) {
-        // std::unordered_map<std::string, std::string> singleColumn;
-        // _data.emplace_back(std::unordered_map<std::string, std::string> {});
-        rocksdb::Iterator* iterator = db->NewIterator(rocksdb::ReadOptions(), handles[i]);
-        std::cout << "I = " << i << std::endl;
-        for (iterator->Seek("k"); iterator->Valid(); iterator->Next()) {
-            auto key = iterator->key().data();
-            auto value = iterator->value().data();
-
-            boost::asio::post(_pool,
-                    std::bind(&CheckSummer::calculate_hash, this, i, key, value));
-            std::cout << "Key: " << iterator->key().data()
-                << "\tValue: " << iterator->value().data() << std::endl;
+        for (auto name : _columnNames) {
+            BOOST_LOG_TRIVIAL(info) << "Name of column: " << name;
+            columnFamilies.push_back(rocksdb::ColumnFamilyDescriptor(
+                        name, rocksdb::ColumnFamilyOptions()));
         }
-    }
-    for (auto handle : handles) {
-        db->DestroyColumnFamilyHandle(handle);
-    }
+        auto s = db->OpenForReadOnly(rocksdb::Options(), _input,
+                columnFamilies, &handles, &db, false);
+        if (!s.ok()) {
+            BOOST_LOG_TRIVIAL(error) << "An error has occured while openning a database: "
+                << s.ToString();
+            return;
+        }
+        for (uint32_t i = 0; i < _columnNames.size(); ++i) {
+            rocksdb::Iterator* iterator = db->NewIterator(
+                    rocksdb::ReadOptions(), handles[i]);
+            BOOST_LOG_TRIVIAL(info) << "Reading column family \""
+                << _columnNames[i] << "\"...";
+            for (iterator->Seek("k"); iterator->Valid(); iterator->Next()) {
+                auto key = iterator->key().data();
+                auto value = iterator->value().data();
 
-    delete db;
-    _pool.join();
+                BOOST_LOG_TRIVIAL(info) << "Key: " << key
+                    << "\tValue: " << value;
+
+                KeyValue keyValue(key, value);
+                boost::asio::post(_pool,
+                        std::bind(&CheckSummer::_calculate_hash, this, i,
+                            keyValue));
+            }
+        }
+        BOOST_LOG_TRIVIAL(warning) << "Successfully read database";
+        for (auto handle : handles) {
+            db->DestroyColumnFamilyHandle(handle);
+        }
+
+        delete db;
+        BOOST_LOG_TRIVIAL(warning) << "Joining threads...";
+        _pool.join();
+
+    } catch(const std::exception &e) {
+        BOOST_LOG_TRIVIAL(error)
+            << "A terminal error has occured while writing database: "
+            << e.what();
+        throw e;
+    }
 }
 
 auto CheckSummer::start() -> void {
-    read_db();
-    //_write_db();
+    BOOST_LOG_TRIVIAL(error) << "Starting CheckSummer...";
+    _read_db();
+    BOOST_LOG_TRIVIAL(warning) << "Writing database...";
+    _write_db();
+    BOOST_LOG_TRIVIAL(error) << "CheckSummer executed successfully!";
 }
 
-auto CheckSummer::calculate_hash(const uint32_t i,
-        const std::string key,
-        const std::string value) -> void {
+auto CheckSummer::_calculate_hash(const uint32_t i,
+        const KeyValue keyValue) -> void {
     std::string hash_hex_str;
-    picosha2::hash256_hex_string(value, hash_hex_str);
-    _data[i][key] = hash_hex_str;
+    picosha2::hash256_hex_string(keyValue.value, hash_hex_str);
+    _mutex.lock();
+    _data[i][keyValue.key] = hash_hex_str;
+    _mutex.unlock();
+    BOOST_LOG_TRIVIAL(info)
+        << "For key " << keyValue.key
+        << " hash was calculated successfully: "
+        << keyValue.value  << " -> " << _data[i][keyValue.key];
 }
+
