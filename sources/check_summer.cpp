@@ -12,33 +12,48 @@ CheckSummer::CheckSummer(const uint32_t& amountOfThreads, const std::string& inp
     _input(input), _output(output) {}
 
 auto CheckSummer::_write_db() -> void {
-    rocksdb::Options options;
-    options.create_if_missing = true;
-    rocksdb::DB* db;
-    rocksdb::WriteBatch batch;
-    std::vector<rocksdb::ColumnFamilyHandle*> handles;
-    handles.resize(_columnNames.size());
+    try {
+        rocksdb::Options options;
+        options.create_if_missing = true;
+        rocksdb::DB* db;
+        rocksdb::WriteBatch batch;
+        std::vector<rocksdb::ColumnFamilyHandle*> handles;
+        handles.resize(_columnNames.size());
 
-    rocksdb::Status s = db->Open(options, _output, &db);
-    if (!s.ok()) {
-        std::cerr << s.ToString() << std::endl;
-    }
-
-    for (uint32_t i = 0; i < _columnNames.size(); ++i) {
-        db->CreateColumnFamily(
-                rocksdb::ColumnFamilyOptions(), _columnNames[i], &handles[i]);
-        for (auto it = _data[i].begin(); it != _data[i].end(); ++it) {
-            batch.Put(handles[i],
-                    rocksdb::Slice(it->first),
-                    rocksdb::Slice(it->second));
+        rocksdb::Status s = db->Open(options, _output, &db);
+        if (!s.ok()) {
+            BOOST_LOG_TRIVIAL(error) << "An error has occured while opening"
+                << " a database to write: "
+                << s.ToString() << std::endl;
         }
-    }
-    db->Write(rocksdb::WriteOptions(), &batch);
 
-    for (auto handle : handles) {
-        db->DestroyColumnFamilyHandle(handle);
+        for (uint32_t i = 0; i < _columnNames.size(); ++i) {
+            BOOST_LOG_TRIVIAL(info) << "Creating column families...";
+            BOOST_LOG_TRIVIAL(info) << "Amount of columns: " << _columnNames.size();
+            db->CreateColumnFamily(
+                    rocksdb::ColumnFamilyOptions(), _columnNames[i], &handles[i]);
+            for (auto it = _data[i].begin(); it != _data[i].end(); ++it) {
+                BOOST_LOG_TRIVIAL(info) << "Preparing to write an element: "
+                    << it->first << " : " << it->second;
+                batch.Put(handles[i],
+                        rocksdb::Slice(it->first),
+                        rocksdb::Slice(it->second));
+            }
+        }
+        BOOST_LOG_TRIVIAL(info) << "Writing data...";
+        db->Write(rocksdb::WriteOptions(), &batch);
+
+        BOOST_LOG_TRIVIAL(info) << "Closing database...";
+        for (auto handle : handles) {
+            db->DestroyColumnFamilyHandle(handle);
+        }
+        delete db;
+    } catch (const std::exception& e) {
+        BOOST_LOG_TRIVIAL(error)
+            << "A terminal error has occured while writing databese: "
+            << e.what();
+        throw e;
     }
-    delete db;
 }
 
 auto CheckSummer::write_test_db() -> void {
@@ -54,10 +69,8 @@ auto CheckSummer::write_test_db() -> void {
     std::vector<rocksdb::ColumnFamilyHandle*> handles;
     handles.resize(3);
     for (uint32_t i = 0; i < 3; ++i) {
-        //handles.emplace_back(new rocksdb::ColumnFamilyHandle);
         std::string name = "Column family ";
         name += std::to_string(i);
-        std::cout << "Name writes: " << name << std::endl;
         s = db->CreateColumnFamily(
                 rocksdb::ColumnFamilyOptions(), name, &handles[i]);
     }
