@@ -1,12 +1,16 @@
+// Copyright 2020 Vumba798 <alexandrov32649@gmail.com>
+#ifndef INCLUDE_CHECK_SUMMER_HPP_
+#define INCLUDE_CHECK_SUMMER_HPP_
 #include <boost/asio/thread_pool.hpp>
 #include <boost/log/core.hpp>
 #include <boost/log/expressions.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/log/utility/setup.hpp>
 #include <rocksdb/c.h>
-#include <atomic>
 #include <condition_variable>
 #include <unordered_map>
+#include <string>
+#include <vector>
 
 struct KeyValue {
     std::string key;
@@ -35,3 +39,4 @@ public:
     auto start() -> void;
 };
 
+#endif // INCLUDE_CHECK_SUMMER_HPP_

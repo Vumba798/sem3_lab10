@@ -7,7 +7,7 @@
 #include <stdexcept>
 #include <boost/program_options.hpp>
 
-namespace po=boost::program_options;
+namespace po = boost::program_options;
 
 int main(int argc, char** argv) {
     std::string input = "";
@@ -28,7 +28,8 @@ int main(int argc, char** argv) {
 
     po::options_description hidden("Hidden options");
     hidden.add_options()
-        ("input", po::value<std::string>()->default_value("path/to/input/storage_db"), "");
+        ("input", po::value<std::string>()->default_value(
+         "path/to/input/storage_db"), "");
 
     po::positional_options_description pos;
     pos.add("input", -1);
@@ -37,12 +38,14 @@ int main(int argc, char** argv) {
     all.add(visible).add(hidden);
 
     po::variables_map vm;
-    po::store(po::command_line_parser(argc, argv).options(all).positional(pos).run(), vm);
+    po::store(po::command_line_parser(
+                argc, argv).options(all).positional(pos).run(), vm);
     po::notify(vm);
 
     // Setting init variables
     if (vm.count("help")) {
-        std::cout << "Usage:\n\n\tdbcs [options] <path/to/input/storage_db>\n\n\n"
+        std::cout
+            << "Usage:\n\n\tdbcs [options] <path/to/input/storage_db>\n\n\n"
             << visible << std::endl;;
         return 1;
     }

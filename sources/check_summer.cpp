@@ -1,3 +1,4 @@
+// Copyright 2020 Vumba798 <alexandrov32649@gmail.com>
 #include <check_summer.hpp>
 #include <boost/asio/post.hpp>
 #include <picosha2.h>
@@ -6,7 +7,8 @@
 #include <rocksdb/options.h>
 #include <iostream>
 
-CheckSummer::CheckSummer(const uint32_t& amountOfThreads, const std::string& input,
+CheckSummer::CheckSummer(const uint32_t& amountOfThreads,
+        const std::string& input,
         const std::string& output) :
     _pool(amountOfThreads),
     _input(input), _output(output) {}
@@ -29,9 +31,12 @@ auto CheckSummer::_write_db() -> void {
 
         for (uint32_t i = 0; i < _columnNames.size(); ++i) {
             BOOST_LOG_TRIVIAL(info) << "Creating column families...";
-            BOOST_LOG_TRIVIAL(info) << "Amount of columns: " << _columnNames.size();
+            BOOST_LOG_TRIVIAL(info)
+                << "Amount of columns: "
+                << _columnNames.size();
             db->CreateColumnFamily(
-                    rocksdb::ColumnFamilyOptions(), _columnNames[i], &handles[i]);
+                    rocksdb::ColumnFamilyOptions(),
+                    _columnNames[i], &handles[i]);
             for (auto it = _data[i].begin(); it != _data[i].end(); ++it) {
                 BOOST_LOG_TRIVIAL(info) << "Preparing to write an element: "
                     << it->first << " : " << it->second;
@@ -101,7 +106,8 @@ auto CheckSummer::_read_db() -> void {
         std::vector<rocksdb::ColumnFamilyDescriptor> columnFamilies;
         std::vector<rocksdb::ColumnFamilyHandle*> handles;
 
-        rocksdb::DB::ListColumnFamilies(rocksdb::DBOptions(), _input, &_columnNames);
+        rocksdb::DB::ListColumnFamilies(
+                rocksdb::DBOptions(), _input, &_columnNames);
         _data.resize(_columnNames.size());
         BOOST_LOG_TRIVIAL(info) << "Amount of columns: " << _columnNames.size();
         BOOST_LOG_TRIVIAL(info) << "Reading list of columns...";
@@ -114,7 +120,8 @@ auto CheckSummer::_read_db() -> void {
         auto s = db->OpenForReadOnly(rocksdb::Options(), _input,
                 columnFamilies, &handles, &db, false);
         if (!s.ok()) {
-            BOOST_LOG_TRIVIAL(error) << "An error has occured while openning a database: "
+            BOOST_LOG_TRIVIAL(error)
+                << "An error has occured while openning a database: "
                 << s.ToString();
             return;
         }
@@ -144,7 +151,6 @@ auto CheckSummer::_read_db() -> void {
         delete db;
         BOOST_LOG_TRIVIAL(warning) << "Joining threads...";
         _pool.join();
-
     } catch(const std::exception &e) {
         BOOST_LOG_TRIVIAL(error)
             << "A terminal error has occured while writing database: "
